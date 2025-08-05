@@ -76,13 +76,16 @@ jobs:
         if [ "$CURRENT_VERSION" != "$NEW_VERSION" ]; then
           echo "version_changed=true" >> $GITHUB_OUTPUT
           echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
-          
+
           # Update VERSION file
           echo "$NEW_VERSION" > VERSION
-          
+
           # Update plugin.yaml version
           sed -i "s/version: \".*\"/version: \"$NEW_VERSION\"/" plugin.yaml
-          
+
+          # Update plugin.yaml uri fields to use the new version
+          sed -i "s|/releases/download/v[0-9]\+\.[0-9]\+\.[0-9]\+/plugin.tar.gz|/releases/download/v$NEW_VERSION/plugin.tar.gz|g" plugin.yaml
+
           # Commit version bump using deploy key to bypass merge request requirement
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"

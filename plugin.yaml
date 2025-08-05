@@ -34,26 +34,26 @@ platforms:
   - selector:
       os: linux
       arch: amd64
-    uri: ./trivy-gitlab-codequality
-    bin: ./trivy-gitlab-codequality
+    uri: https://github.com/ambient-innovation/trivy-plugin-gitlab-codequality/releases/download/v1.2.0/plugin.tar.gz
+    bin: trivy-gitlab-codequality-linux
   - selector:
       os: linux
       arch: arm64
-    uri: ./trivy-gitlab-codequality
-    bin: ./trivy-gitlab-codequality
+    uri: https://github.com/ambient-innovation/trivy-plugin-gitlab-codequality/releases/download/v1.2.0/plugin.tar.gz
+    bin: trivy-gitlab-codequality-linux
   - selector:
       os: darwin
       arch: amd64
-    uri: ./trivy-gitlab-codequality
-    bin: ./trivy-gitlab-codequality
+    uri: https://github.com/ambient-innovation/trivy-plugin-gitlab-codequality/releases/download/v1.2.0/plugin.tar.gz
+    bin: trivy-gitlab-codequality-darwin
   - selector:
       os: darwin
       arch: arm64
-    uri: ./trivy-gitlab-codequality
-    bin: ./trivy-gitlab-codequality
+    uri: https://github.com/ambient-innovation/trivy-plugin-gitlab-codequality/releases/download/v1.2.0/plugin.tar.gz
+    bin: trivy-gitlab-codequality-darwin
   - selector:
       os: windows
       arch: amd64
-    uri: ./trivy-gitlab-codequality.exe
-    bin: ./trivy-gitlab-codequality.exe
+    uri: https://github.com/ambient-innovation/trivy-plugin-gitlab-codequality/releases/download/v1.2.0/plugin.tar.gz
+    bin: trivy-gitlab-codequality-windows.exe
 
