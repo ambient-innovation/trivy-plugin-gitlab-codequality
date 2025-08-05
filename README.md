@@ -1,54 +1,40 @@
 # trivy-plugin-gitlab-codequality
-A Trivy plugin that transforms the output to show up in the GitLab CodeQuality Widget.  
-Supports filtering by severity levels for different scan types and custom output formatting.
+This plugin converts Trivy scan results into GitLab Code Quality format for integration with GitLab CI/CD pipelines and merge request reports.
 
 # Usage
-You canuse the plugin either as a standalone plugin for conversion or as an output plugin for the trivy scanning command.  
+You can use the plugin either as a standalone plugin for conversion or as an output plugin for the trivy scanning command.  
 Make sure to run the trivy scan with the broadest possible severity and pkg-types filters you still want to include in any of the scan-reports.
   
 Standalone usage:
 ```yaml
-usage: gitlab-codeclimate [-h]
-  [--severity SEVERITY]
-  [--severity-license SEVERITY_LICENSE] [--severity-vuln SEVERITY_VULN]
-  [--severity-misconfig SEVERITY_MISCONFIG] [--severity-secret SEVERITY_SECRET]
-  [--pkg-types PKG_TYPES]
-  [--pkg-types-license PKG_TYPES_LICENSE] [--pkg-types-vuln PKG_TYPES_VULN]
-  [--pkg-types-misconfig PKG_TYPES_MISCONFIG] [--pkg-types-secret PKG_TYPES_SECRET]
-  [--debug]
-  [-o OUTPUT]
+  Usage:
+    trivy image --format json --output report.json --output plugin=gitlab-codequality <image>
+    trivy fs --format json --output report.json --output plugin=gitlab-codequality <path>
+  
+  Usage with plugin options (all options must be passed within --output-plugin-arg):
+    trivy image --format json --output report.json \
+      --output plugin=gitlab-codequality \
+      --output-plugin-arg "--severity UNKNOWN,CRITICAL,HIGH --severity-misconfig UNKNOWN,CRITICAL --output codequality.json" \
+      <image>
+  
+  Available plugin options (to be used within --output-plugin-arg, all are optional):
+    --severity <SEVERITIES>          Global severity filter (comma-separated)
+    --severity-license <SEVERITIES>  License-specific severity filter
+    --severity-vuln <SEVERITIES>     Vulnerability-specific severity filter
+    --severity-misconfig <SEVERITIES> Misconfiguration-specific severity filter
+    --severity-secret <SEVERITIES>   Secret-specific severity filter
+    --pkg-types <TYPES>              Global package types filter (comma-separated)
+    --pkg-types-license <TYPES>      License-specific package types filter
+    --pkg-types-vuln <TYPES>         Vulnerability-specific package types filter
+    --pkg-types-misconfig <TYPES>    Misconfiguration-specific package types filter
+    --pkg-types-secret <TYPES>       Secret-specific package types filter
+    --debug                          Enable debug output
+    --output <FILE>                  Output file path
+    --input <FILE>                   Input file path
 
-options:
-  -h, --help
-                        show this help message and exit
-  --severity SEVERITY
-                        Global Severity (Default)
-  --severity-license SEVERITY_LICENSE
-                        License Severity
-  --severity-vuln SEVERITY_VULN
-                        Vulnerabilities Severity
-  --severity-misconfig SEVERITY_MISCONFIG
-                        Misconfig Severity
-  --severity-secret SEVERITY_SECRET
-                        Secret Severity
-  --pkg-types PKG_TYPES
-                        Global Package Types (Default)
-  --pkg-types-license PKG_TYPES_LICENSE
-                        License Package Types
-  --pkg-types-vuln PKG_TYPES_VULN
-                        Vulnerabilities Package Types
-  --pkg-types-misconfig PKG_TYPES_MISCONFIG
-                        Misconfig Package Types
-  --pkg-types-secret PKG_TYPES_SECRET
-                        Secret Package Types
-  --debug
-                        Debug Outputs
-  -o, --output OUTPUT
-                        Output file
+SEVERITIES: UNKNOWN,CRITICAL,HIGH,MEDIUM,LOW
+TYPES: library,os
 ```
-
-To use it in output mode add the arguments to your trivy scanning command via the --output plugin-arg string:
-i.e.: `trivy image --format json  --output plugin=gitlab-codequality --output-plugin-arg "--severity-misconfig UNKNOWN,CRITICAL --severity-secret UNKNOWN,CRITICAL --pkg-types-license library" debian:12`
 
 # License
 Apache 2.0
