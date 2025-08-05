@@ -1,6 +1,6 @@
 name: "gitlab-codequality"
 repository: github.com/your-username/gitlab-trivy-checks
-version: "1.2.0"
+version: "1.1.0"
 summary: "Trivy plugin to generate GitLab Code Quality reports"
 description: |
   This plugin converts Trivy scan results into GitLab Code Quality format for integration
