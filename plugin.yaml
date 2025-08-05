@@ -1,0 +1,59 @@
+name: "gitlab-codequality"
+repository: github.com/your-username/gitlab-trivy-checks
+version: "Placeholder for version, automatically updated by GitHub Actions"
+summary: "Trivy plugin to generate GitLab Code Quality reports"
+description: |
+  This plugin converts Trivy scan results into GitLab Code Quality format for integration
+  with GitLab CI/CD pipelines and merge request reports.
+  
+  Usage:
+    trivy image --format json --output report.json --output plugin=gitlab-codequality <image>
+    trivy fs --format json --output report.json --output plugin=gitlab-codequality <path>
+  
+  Usage with plugin options (all options must be passed within --output-plugin-arg):
+    trivy image --format json --output report.json \
+      --output plugin=gitlab-codequality \
+      --output-plugin-arg "--severity UNKNOWN,CRITICAL,HIGH --severity-misconfig UNKNOWN,CRITICAL --output codequality.json" \
+      <image>
+  
+  Available plugin options (to be used within --output-plugin-arg):
+    --severity <SEVERITIES>          Global severity filter (comma-separated)
+    --severity-license <SEVERITIES>  License-specific severity filter
+    --severity-vuln <SEVERITIES>     Vulnerability-specific severity filter
+    --severity-misconfig <SEVERITIES> Misconfiguration-specific severity filter
+    --severity-secret <SEVERITIES>   Secret-specific severity filter
+    --pkg-types <TYPES>              Global package types filter (comma-separated)
+    --pkg-types-license <TYPES>      License-specific package types filter
+    --pkg-types-vuln <TYPES>         Vulnerability-specific package types filter
+    --pkg-types-misconfig <TYPES>    Misconfiguration-specific package types filter
+    --pkg-types-secret <TYPES>       Secret-specific package types filter
+    --debug                          Enable debug output
+    --output <FILE>                  Output file path
+    --input <FILE>                   Input file path
+platforms:
+  - selector:
+      os: linux
+      arch: amd64
+    uri: ./trivy-gitlab-codequality
+    bin: ./trivy-gitlab-codequality
+  - selector:
+      os: linux
+      arch: arm64
+    uri: ./trivy-gitlab-codequality
+    bin: ./trivy-gitlab-codequality
+  - selector:
+      os: darwin
+      arch: amd64
+    uri: ./trivy-gitlab-codequality
+    bin: ./trivy-gitlab-codequality
+  - selector:
+      os: darwin
+      arch: arm64
+    uri: ./trivy-gitlab-codequality
+    bin: ./trivy-gitlab-codequality
+  - selector:
+      os: windows
+      arch: amd64
+    uri: ./trivy-gitlab-codequality.exe
+    bin: ./trivy-gitlab-codequality.exe
+

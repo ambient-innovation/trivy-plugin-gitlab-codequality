@@ -1,0 +1,251 @@
+name: Build and Release Trivy Plugin
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+    inputs:
+      version_bump:
+        description: 'Version bump type'
+        required: true
+        default: 'minor'
+        type: choice
+        options:
+        - patch
+        - minor
+        - major
+
+jobs:
+  version:
+    runs-on: ubuntu-latest
+    outputs:
+      new_version: ${{ steps.version.outputs.new_version }}
+      version_changed: ${{ steps.version.outputs.version_changed }}
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        token: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: Calculate new version
+      id: version
+      run: |
+        # Read current version
+        CURRENT_VERSION=$(cat VERSION)
+        echo "Current version: $CURRENT_VERSION"
+        
+        # Parse version components
+        IFS='.' read -r MAJOR MINOR PATCH <<< "$CURRENT_VERSION"
+        
+        # Determine bump type
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          BUMP_TYPE="${{ github.event.inputs.version_bump }}"
+        else
+          # Default to minor for automatic builds
+          BUMP_TYPE="minor"
+        fi
+        
+        echo "Bump type: $BUMP_TYPE"
+        
+        # Calculate new version based on bump type
+        case $BUMP_TYPE in
+          major)
+            MAJOR=$((MAJOR + 1))
+            MINOR=0
+            PATCH=0
+            ;;
+          minor)
+            MINOR=$((MINOR + 1))
+            PATCH=0
+            ;;
+          patch)
+            PATCH=$((PATCH + 1))
+            ;;
+        esac
+        
+        NEW_VERSION="${MAJOR}.${MINOR}.${PATCH}"
+        echo "New version: $NEW_VERSION"
+        
+        # Check if version actually changed
+        if [ "$CURRENT_VERSION" != "$NEW_VERSION" ]; then
+          echo "version_changed=true" >> $GITHUB_OUTPUT
+          echo "new_version=$NEW_VERSION" >> $GITHUB_OUTPUT
+          
+          # Update VERSION file
+          echo "$NEW_VERSION" > VERSION
+          
+          # Update plugin.yaml version
+          sed -i "s/version: \".*\"/version: \"$NEW_VERSION\"/" plugin.yaml
+          
+          # Commit version bump
+          git config --local user.email "action@github.com"
+          git config --local user.name "GitHub Action"
+          git add VERSION plugin.yaml
+          git commit -m "Bump version to $NEW_VERSION" || exit 0
+          git push
+        else
+          echo "version_changed=false" >> $GITHUB_OUTPUT
+          echo "new_version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+        fi
+
+  build:
+    needs: version
+    if: needs.version.outputs.version_changed == 'true'
+    strategy:
+      matrix:
+        include:
+          - os: linux
+            runner: ubuntu-latest
+            binary: trivy-gitlab-codequality
+          - os: darwin
+            runner: macos-latest
+            binary: trivy-gitlab-codequality
+          - os: windows
+            runner: windows-latest
+            binary: trivy-gitlab-codequality.exe
+
+    runs-on: ${{ matrix.runner }}
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v4
+      with:
+        python-version: '3.11'
+
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install pyinstaller
+
+    - name: Build binary
+      run: |
+        pyinstaller --onefile --name trivy-gitlab-codequality trivy-gitlab-codequality.py
+
+    - name: Create package directory
+      run: |
+        mkdir -p package
+
+    - name: Copy files to package (Unix)
+      if: matrix.os != 'windows'
+      run: |
+        cp dist/${{ matrix.binary }} package/
+        cp plugin.yaml package/
+        chmod +x package/${{ matrix.binary }}
+
+    - name: Copy files to package (Windows)
+      if: matrix.os == 'windows'
+      run: |
+        copy dist\${{ matrix.binary }} package\
+        copy plugin.yaml package\
+
+    - name: Create tar.gz archive (Unix)
+      if: matrix.os != 'windows'
+      run: |
+        cd package
+        tar -czf ../trivy-gitlab-codequality-${{ matrix.os }}.tar.gz *
+
+    - name: Create tar.gz archive (Windows)
+      if: matrix.os == 'windows'
+      run: |
+        cd package
+        tar -czf ../trivy-gitlab-codequality-${{ matrix.os }}.tar.gz *
+
+    - name: Upload artifact
+      uses: actions/upload-artifact@v3
+      with:
+        name: trivy-gitlab-codequality-${{ matrix.os }}
+        path: trivy-gitlab-codequality-${{ matrix.os }}.tar.gz
+
+  create-universal-package:
+    needs: [version, build]
+    if: needs.version.outputs.version_changed == 'true'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        ref: main  # Ensure we get the updated version
+
+    - name: Download all artifacts
+      uses: actions/download-artifact@v3
+
+    - name: Create universal package
+      run: |
+        mkdir -p universal-package
+        
+        # Copy plugin.yaml to universal package
+        cp plugin.yaml universal-package/
+        
+        # For each platform, extract and copy the binary with appropriate naming
+        for artifact in trivy-gitlab-codequality-*; do
+          if [ -d "$artifact" ]; then
+            cd "$artifact"
+            tar -xzf *.tar.gz
+            
+            # Extract platform info from artifact name
+            os=$(echo "$artifact" | sed 's/trivy-gitlab-codequality-//')
+            
+            # Copy binary with platform-specific name
+            if [ "$os" = "windows" ]; then
+              cp trivy-gitlab-codequality.exe "../universal-package/trivy-gitlab-codequality-${os}.exe"
+            else
+              cp trivy-gitlab-codequality "../universal-package/trivy-gitlab-codequality-${os}"
+              chmod +x "../universal-package/trivy-gitlab-codequality-${os}"
+            fi
+            cd ..
+          fi
+        done
+        
+        # Create the universal tar.gz
+        cd universal-package
+        tar -czf ../plugin.tar.gz *
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: v${{ needs.version.outputs.new_version }}
+        release_name: Trivy GitLab CodeQuality Plugin v${{ needs.version.outputs.new_version }}
+        body: |
+          Automated release of Trivy GitLab CodeQuality Plugin v${{ needs.version.outputs.new_version }}
+          
+          This release includes:
+          - Universal binary package supporting multiple platforms (Linux, macOS, Windows)
+          - Plugin configuration file with SemVer versioning
+          
+          ## Installation
+          ```bash
+          # Download and extract
+          wget https://github.com/${{ github.repository }}/releases/download/v${{ needs.version.outputs.new_version }}/plugin.tar.gz
+          tar -xzf plugin.tar.gz
+          
+          # Install plugin
+          trivy plugin install .
+          ```
+          
+          ## Usage
+          ```bash
+          # Basic usage
+          trivy image --format json --output report.json --output plugin=gitlab-codequality <image>
+          
+          # With options
+          trivy image --format json --output report.json \
+            --output plugin=gitlab-codequality \
+            --output-plugin-arg "--severity CRITICAL,HIGH --output codequality.json" \
+            <image>
+          ```
+        draft: false
+        prerelease: false
+
+    - name: Upload Release Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./plugin.tar.gz
+        asset_name: plugin.tar.gz
+        asset_content_type: application/gzip
