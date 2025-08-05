@@ -2,7 +2,7 @@ name: Build and Release Trivy Plugin
 
 on:
   push:
-    branches: [ master ]
+    branches: [ main ]
   workflow_dispatch:
     inputs:
       version_bump:
@@ -25,7 +25,6 @@ jobs:
     - uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        token: ${{ secrets.GITHUB_TOKEN }}
         ssh-key: ${{ secrets.ACTION_DEPLOY_KEY }}
 
     - name: Calculate new version
@@ -78,7 +77,7 @@ jobs:
           # Update plugin.yaml version
           sed -i "s/version: \".*\"/version: \"$NEW_VERSION\"/" plugin.yaml
           
-          # Commit version bump
+          # Commit version bump using deploy key to bypass merge request requirement
           git config --local user.email "action@github.com"
           git config --local user.name "GitHub Action"
           git add VERSION plugin.yaml
@@ -111,7 +110,7 @@ jobs:
     - uses: actions/checkout@v4
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5
       with:
         python-version: '3.11'
 
@@ -154,7 +153,7 @@ jobs:
         tar -czf ../trivy-gitlab-codequality-${{ matrix.os }}.tar.gz *
 
     - name: Upload artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with:
         name: trivy-gitlab-codequality-${{ matrix.os }}
         path: trivy-gitlab-codequality-${{ matrix.os }}.tar.gz
@@ -169,7 +168,7 @@ jobs:
         ref: main  # Ensure we get the updated version
 
     - name: Download all artifacts
-      uses: actions/download-artifact@v3
+      uses: actions/download-artifact@v4
 
     - name: Create universal package
       run: |
@@ -202,14 +201,11 @@ jobs:
         cd universal-package
         tar -czf ../plugin.tar.gz *
 
-    - name: Create Release
-      id: create_release
-      uses: actions/create-release@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    - name: Create and Upload Release
+      uses: softprops/action-gh-release@v2
       with:
         tag_name: v${{ needs.version.outputs.new_version }}
-        release_name: Trivy GitLab CodeQuality Plugin v${{ needs.version.outputs.new_version }}
+        name: Trivy GitLab CodeQuality Plugin v${{ needs.version.outputs.new_version }}
         body: |
           Automated release of Trivy GitLab CodeQuality Plugin v${{ needs.version.outputs.new_version }}
           
@@ -238,15 +234,7 @@ jobs:
             --output-plugin-arg "--severity CRITICAL,HIGH --output codequality.json" \
             <image>
           ```
+        files: plugin.tar.gz
         draft: false
         prerelease: false
-
-    - name: Upload Release Asset
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./plugin.tar.gz
-        asset_name: plugin.tar.gz
-        asset_content_type: application/gzip
+        token: ${{ secrets.GITHUB_TOKEN }}
