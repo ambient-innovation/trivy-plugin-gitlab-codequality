@@ -189,10 +189,10 @@ jobs:
         include:
           - os: darwin
             runner: macos-latest
-            binary: trivy-gitlab-codequality
+            binary: trivy-gitlab-codequality-darwin
           - os: windows
             runner: windows-latest
-            binary: trivy-gitlab-codequality.exe
+            binary: trivy-gitlab-codequality-windows.exe
     runs-on: ${{ matrix.runner }}
     steps:
     - uses: actions/checkout@v4
@@ -258,7 +258,7 @@ jobs:
     - name: Download all artifacts
       uses: actions/download-artifact@v4
       
-    - name: Create universal package and wrapper
+    - name: Create universal package
       run: |
         mkdir -p universal-package
         
@@ -280,16 +280,8 @@ jobs:
           fi
         done
 
-        # Create wrapper script
-        cat << 'EOF' > universal-package/trivy-gitlab-codequality
-        #!/bin/sh
-        if ldd --version 2>&1 | grep -q musl; then
-          exec "$(dirname "$0")/trivy-gitlab-codequality-musl" "$@"
-        else
-          exec "$(dirname "$0")/trivy-gitlab-codequality-glibc" "$@"
-        fi
-        EOF
-        chmod +x universal-package/trivy-gitlab-codequality
+        # Build static wrapper binary only for Linux (musl/glibc detection)
+        CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags="-s -w" -o universal-package/trivy-gitlab-codequality-linux wrapper.go
         
         # Package everything
         cd universal-package
