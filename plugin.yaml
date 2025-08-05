@@ -1,6 +1,6 @@
 name: "gitlab-codequality"
 repository: github.com/your-username/gitlab-trivy-checks
-version: "1.7.0"
+version: "1.8.0"
 summary: "Trivy plugin to generate GitLab Code Quality reports"
 description: |
   This plugin converts Trivy scan results into GitLab Code Quality format for integration
@@ -34,26 +34,26 @@ platforms:
   - selector:
       os: linux
       arch: amd64
-    uri: https://github.com/ambient-innovation/trivy-plugin-gitlab-codequality/releases/download/v1.7.0/plugin.tar.gz
+    uri: https://github.com/ambient-innovation/trivy-plugin-gitlab-codequality/releases/download/v1.8.0/plugin.tar.gz
     bin: trivy-gitlab-codequality-linux
   - selector:
       os: linux
       arch: arm64
-    uri: https://github.com/ambient-innovation/trivy-plugin-gitlab-codequality/releases/download/v1.7.0/plugin.tar.gz
+    uri: https://github.com/ambient-innovation/trivy-plugin-gitlab-codequality/releases/download/v1.8.0/plugin.tar.gz
     bin: trivy-gitlab-codequality-linux
   - selector:
       os: darwin
       arch: amd64
-    uri: https://github.com/ambient-innovation/trivy-plugin-gitlab-codequality/releases/download/v1.7.0/plugin.tar.gz
+    uri: https://github.com/ambient-innovation/trivy-plugin-gitlab-codequality/releases/download/v1.8.0/plugin.tar.gz
     bin: trivy-gitlab-codequality-darwin
   - selector:
       os: darwin
       arch: arm64
-    uri: https://github.com/ambient-innovation/trivy-plugin-gitlab-codequality/releases/download/v1.7.0/plugin.tar.gz
+    uri: https://github.com/ambient-innovation/trivy-plugin-gitlab-codequality/releases/download/v1.8.0/plugin.tar.gz
     bin: trivy-gitlab-codequality-darwin
   - selector:
       os: windows
       arch: amd64
-    uri: https://github.com/ambient-innovation/trivy-plugin-gitlab-codequality/releases/download/v1.7.0/plugin.tar.gz
+    uri: https://github.com/ambient-innovation/trivy-plugin-gitlab-codequality/releases/download/v1.8.0/plugin.tar.gz
     bin: trivy-gitlab-codequality-windows.exe
 
