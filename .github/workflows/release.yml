@@ -26,6 +26,7 @@ jobs:
       with:
         fetch-depth: 0
         token: ${{ secrets.GITHUB_TOKEN }}
+        ssh-key: ${{ secrets.ACTION_DEPLOY_KEY }}
 
     - name: Calculate new version
       id: version
