@@ -17,9 +17,32 @@ func main() {
     }
 
     var bin string
-    // Detect musl vs glibc
-    out, err := exec.Command("ldd", "--version").CombinedOutput()
-    if err == nil && bytes.Contains(out, []byte("musl")) {
+    // Detect musl vs glibc with multiple methods
+    isMusl := false
+    
+    // Method 1: Check ldd --version output (ignore exit status)
+    out, _ := exec.Command("ldd", "--version").CombinedOutput()
+    if bytes.Contains(out, []byte("musl")) {
+        isMusl = true
+    }
+    
+    // Method 2: Check if musl-specific file exists
+    if !isMusl {
+        if _, err := os.Stat("/lib/ld-musl-x86_64.so.1"); err == nil {
+            isMusl = true
+        }
+    }
+    
+    // Method 3: Check getconf GNU_LIBC_VERSION (only works on glibc)
+    if !isMusl {
+        out, err := exec.Command("getconf", "GNU_LIBC_VERSION").CombinedOutput()
+        if err != nil || len(out) == 0 {
+            // If getconf fails or returns empty, likely musl
+            isMusl = true
+        }
+    }
+    
+    if isMusl {
         bin = "trivy-gitlab-codequality-musl"
     } else {
         bin = "trivy-gitlab-codequality-glibc"
