@@ -207,9 +207,15 @@ jobs:
         python -m pip install --upgrade pip
         pip install pyinstaller
 
-    - name: Build binary
+    - name: Build binary (Unix)
+      if: matrix.os != 'windows'
       run: |
         pyinstaller --onefile --strip --name ${{ matrix.binary }} trivy-gitlab-codequality.py
+
+    - name: Build binary (Windows with additional options)
+      if: matrix.os == 'windows'
+      run: |
+        pyinstaller --onefile --strip --name ${{ matrix.binary }} --noupx --exclude-module tkinter --exclude-module matplotlib --disable-windowed-traceback trivy-gitlab-codequality.py
 
     - name: Create package directory
       run: |
