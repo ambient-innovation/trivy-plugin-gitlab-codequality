@@ -18,6 +18,12 @@ on:
 jobs:
   version:
     runs-on: ubuntu-latest
+    # Only run if:
+    # 1. For push events: commit was not made by GitHub Action to prevent recursion
+    # 2. For manual dispatch: always allow (but subsequent push will be blocked by condition 1)
+    if: |
+      (github.event_name == 'workflow_dispatch') ||
+      (github.event_name == 'push' && github.actor != 'github-actions[bot]' && !contains(github.event.head_commit.message, 'Bump version to'))
     outputs:
       new_version: ${{ steps.version.outputs.new_version }}
       version_changed: ${{ steps.version.outputs.version_changed }}
