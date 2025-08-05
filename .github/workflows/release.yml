@@ -128,9 +128,13 @@ jobs:
         python -m pip install --upgrade pip
         pip install pyinstaller
 
-    - name: Build binary
+    - name: Build binary with static linking in Alpine
       run: |
-        pyinstaller --onefile --strip --name trivy-gitlab-codequality trivy-gitlab-codequality.py
+        docker run --rm -v $(pwd):/src -w /src alpine:latest sh -c '
+          apk add --no-cache python3 py3-pip musl-dev gcc g++ py3-setuptools && \
+          pip install pyinstaller && \
+          pyinstaller --onefile --strip --name trivy-gitlab-codequality trivy-gitlab-codequality.py
+        '
 
     - name: Create package directory
       run: |
