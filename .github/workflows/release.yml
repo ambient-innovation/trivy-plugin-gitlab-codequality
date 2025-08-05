@@ -269,6 +269,12 @@ jobs:
           if [ -d "$artifact" ]; then
             cd "$artifact"
             tar -xzf *.tar.gz
+            # Copy binaries to universal-package
+            for bin in trivy-gitlab-codequality*; do
+              if [ -f "$bin" ]; then
+                cp "$bin" ../universal-package/
+              fi
+            done
             cd ..
           fi
         done
