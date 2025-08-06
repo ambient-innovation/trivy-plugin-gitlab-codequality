@@ -4,6 +4,12 @@ import json
 import sys
 import argparse
 
+try:
+    from tabulate import tabulate
+    TABULATE_AVAILABLE = True
+except ImportError:
+    TABULATE_AVAILABLE = False
+
 LOG_PREFIX = "[trivy][plugins][codeclimate]"
 
 SEVERITY_MAP = {"LOW": "info", "MEDIUM": "minor", "HIGH": "major", "CRITICAL": "critical", "UNKNOWN": "blocker"}
@@ -60,6 +66,9 @@ def main():
                         type=str,
                         default=None,
                         help='Input file')
+    parser.add_argument('-t', '--table',
+                        action='store_true',
+                        help='Output results as a table instead of JSON')
     args = parser.parse_args()
 
     SEVERITY = build_severity_matrix(args)
@@ -88,7 +97,11 @@ def main():
         if DEBUG:
             print(f"{LOG_PREFIX} Output:")
             print(json.dumps(output, indent=2))
-        if args.output:
+        
+        if args.table:
+            # Output as table
+            print_table(output)
+        elif args.output:
             with open(args.output, 'w') as f:
                 json.dump(output, f, indent=4)
         else:
@@ -98,25 +111,59 @@ def main():
         exit(1)
 
 
+def print_table(output):
+    """Print results in a formatted table."""
+    if not TABULATE_AVAILABLE:
+        print("Error: tabulate library not installed. Install with: pip install tabulate")
+        print("Falling back to JSON output:")
+        print(json.dumps(output, indent=4))
+        return
+
+    if not output:
+        print("No results to display.")
+        return
+
+    # Prepare table data
+    table_data = []
+    table_data.extend(
+        [
+            item.get('check_name', ''),
+            item.get('description', ''),
+            item.get('severity', ''),
+            item.get('location', {}).get('path', ''),
+            (
+                item.get('fingerprint', '')[:100] + '...'
+                if len(item.get('fingerprint', '')) > 100
+                else item.get('fingerprint', '')
+            ),
+        ]
+        for item in output
+    )
+    # Table headers
+    headers = ['Type', 'Description', 'Severity', 'Location', 'Details']
+
+    # Print table
+    print(tabulate(table_data, headers=headers, tablefmt='grid'))
+    print(f"\nTotal issues found: {len(output)}")
+
+
 def build_severity_matrix(args):
-    severity_matrix = {
+    return {
         "severity": args.severity,
         "license": args.severity_license or args.severity,
         "vuln": args.severity_vuln or args.severity,
         "misconfig": args.severity_misconfig or args.severity,
-        "secret": args.severity_secret or args.severity
+        "secret": args.severity_secret or args.severity,
     }
-    return severity_matrix
 
 def build_pkg_types_matrix(args):
-    pkg_types_matrix = {
+    return {
         "pkg_types": args.pkg_types,
         "license": args.pkg_types_license or args.pkg_types,
         "vuln": args.pkg_types_vuln or args.pkg_types,
         "misconfig": args.pkg_types_misconfig or args.pkg_types,
-        "secret": args.pkg_types_secret or args.pkg_types
+        "secret": args.pkg_types_secret or args.pkg_types,
     }
-    return pkg_types_matrix
 
 def split_json(data):
     # Define the mapping of result types to their keys and default values
@@ -245,10 +292,11 @@ def filter_scan(result, issue_type, severity, pkg_types):
 
     # Filter and transform items
     filtered_items = []
-    for item in result:
-        if should_include_item(item, severity, pkg_types):
-            filtered_items.append(create_output_item(item, issue_type))
-
+    filtered_items.extend(
+        create_output_item(item, issue_type)
+        for item in result
+        if should_include_item(item, severity, pkg_types)
+    )
     return filtered_items
 
 
