@@ -14,6 +14,16 @@ LOG_PREFIX = "[trivy][plugins][codeclimate]"
 
 SEVERITY_MAP = {"LOW": "info", "MEDIUM": "minor", "HIGH": "major", "CRITICAL": "critical", "UNKNOWN": "blocker"}
 
+# ANSI color codes for severity levels
+SEVERITY_COLORS = {
+    "info": "\033[94m",      # Blue for LOW/info
+    "minor": "\033[93m",     # Yellow for MEDIUM/minor
+    "major": "\033[91m",     # Red for HIGH/major
+    "critical": "\033[95m",  # Magenta for CRITICAL/critical
+    "blocker": "\033[97;41m" # White on red background for UNKNOWN/blocker
+}
+RESET_COLOR = "\033[0m"
+
 DEFAULT_SEVERITY = ['UNKNOWN','CRITICAL','HIGH']
 
 DEFAULT_PKG_TYPES = ['os', 'library']
@@ -101,7 +111,7 @@ def main():
         if args.table:
             # Output as table
             print_table(output)
-        elif args.output:
+        if args.output:
             with open(args.output, 'w') as f:
                 json.dump(output, f, indent=4)
         else:
@@ -125,20 +135,23 @@ def print_table(output):
 
     # Prepare table data
     table_data = []
-    table_data.extend(
-        [
+    for item in output:
+        severity = item.get('severity', '')
+        # Add color to severity based on level
+        colored_severity = f"{SEVERITY_COLORS.get(severity, '')}{severity.upper()}{RESET_COLOR}"
+        
+        table_data.append([
             item.get('check_name', ''),
             item.get('description', ''),
-            item.get('severity', ''),
+            colored_severity,
             item.get('location', {}).get('path', ''),
             (
                 item.get('fingerprint', '')[:100] + '...'
                 if len(item.get('fingerprint', '')) > 100
                 else item.get('fingerprint', '')
             ),
-        ]
-        for item in output
-    )
+        ])
+    
     # Table headers
     headers = ['Type', 'Description', 'Severity', 'Location', 'Details']
 
