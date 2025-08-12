@@ -145,11 +145,7 @@ def print_table(output):
             item.get('description', ''),
             colored_severity,
             item.get('location', {}).get('path', ''),
-            (
-                item.get('fingerprint', '')[:100] + '...'
-                if len(item.get('fingerprint', '')) > 100
-                else item.get('fingerprint', '')
-            ),
+            item.get('fingerprint', ''),
         ])
     
     # Table headers
@@ -250,6 +246,21 @@ def get_package_type(item):
     # Default to library if we can't determine (most issues are typically in dependencies)
     return 'library'
 
+def split_text_to_lines(text, max_length=120):
+    """Split text into lines not exceeding max_length, keeping words together."""
+    words = text.split()
+    line = ''
+    lines = []
+    for word in words:
+        if len(line) + len(word) + 1 > max_length:
+            lines.append(line.rstrip())
+            line = ''
+        line += word + ' '
+    if line:
+        lines.append(line.rstrip())
+    return lines
+
+
 def build_content(item, issue_type):
     """Build content description based on issue type and available fields."""
     if issue_type == "license":
@@ -266,8 +277,9 @@ def build_content(item, issue_type):
     desc_parts = []
     for field in fields:
         if field_value := item.get(field):
-            desc_parts.append(field_value)
-    return "\n".join(desc_parts)
+            lines = split_text_to_lines(field_value)
+            desc_parts.append("\n".join(lines))
+    return "\n\n".join(desc_parts)
 
 def should_include_item(item, severity, pkg_types):
     """Check if an item should be included based on severity and package type filters."""
