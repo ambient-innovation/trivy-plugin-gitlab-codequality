@@ -141,13 +141,16 @@ def print_table(output):
         # split text by /
         parts = text.split('/')
         combined_text = ""
-        for part in parts:
-            if len(combined_text) + len(part) + 2 > width:
-                yield f"{combined_text}/\n"
+        for i, part in enumerate(parts):
+            if i == 0:
                 combined_text = part
             else:
-                combined_text += f"/{part}"
-        yield combined_text
+                if len(combined_text) + len(part) + 2 > width:
+                    yield f"{combined_text}/\n"
+                    combined_text = part
+                else:
+                    combined_text += f"/{part}"
+            yield combined_text
 
     # Prepare table data with wrapped text
     table_data = []
