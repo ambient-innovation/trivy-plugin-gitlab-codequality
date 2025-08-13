@@ -3,6 +3,9 @@
 import json
 import sys
 import argparse
+import textwrap
+
+from tabulate import SEPARATING_LINE
 
 try:
     from tabulate import tabulate
@@ -133,26 +136,53 @@ def print_table(output):
         print("No results to display.")
         return
 
-    # Prepare table data
+    def custom_wrap(text, width):
+        """Custom wrap function to break lines preferably at '/' but also at max width."""
+        # split text by /
+        parts = text.split('/')
+        combined_text = ""
+        for part in parts:
+            if len(combined_text) + len(part) + 2 > width:
+                yield f"{combined_text}/\n"
+                combined_text = part
+            else:
+                combined_text += f"/{part}"
+        yield combined_text
+
+    # Prepare table data with wrapped text
     table_data = []
     for item in output:
         severity = item.get('severity', '')
         # Add color to severity based on level
         colored_severity = f"{SEVERITY_COLORS.get(severity, '')}{severity.upper()}{RESET_COLOR}"
-        
-        table_data.append([
-            item.get('check_name', ''),
-            item.get('description', ''),
-            colored_severity,
-            item.get('location', {}).get('path', ''),
-            item.get('fingerprint', ''),
-        ])
+
+        # Check if description matches location and replace with a placeholder
+        location = item.get('location', {}).get('path', '')
+        description = item.get('description', '')
+        if description == location:
+            description = 'cf location'
+
+        # Wrap text for each column, with custom handling for location
+        wrapped_row_1 = [
+            "\n".join(textwrap.wrap(item.get('check_name', ''), width=20)),
+            "\n".join(textwrap.wrap(description, width=80)),
+            "\n".join(textwrap.wrap(colored_severity, width=20)),
+        ]
+        wrapped_row_2 = [
+            "\n".join(textwrap.wrap("".join(custom_wrap(location, width=40)), width=40)),
+            "\n".join(textwrap.wrap(item.get('fingerprint', ''), width=80, replace_whitespace=False)),
+        ]
+        table_data.append(wrapped_row_1)
+        table_data.append(["-"*20, "-"*20, "-"*8])
     
+        table_data.append(wrapped_row_2)
+        table_data.append(SEPARATING_LINE)
+
     # Table headers
-    headers = ['Type', 'Description', 'Severity', 'Location', 'Details']
+    headers = ['Type\nLocation', 'Description\nDetails', 'Severity']
 
     # Print table
-    print(tabulate(table_data, headers=headers, tablefmt='grid'))
+    print(tabulate(table_data, headers=headers, tablefmt='psql'))
     print(f"\nTotal issues found: {len(output)}")
 
 
@@ -246,21 +276,6 @@ def get_package_type(item):
     # Default to library if we can't determine (most issues are typically in dependencies)
     return 'library'
 
-def split_text_to_lines(text, max_length=120):
-    """Split text into lines not exceeding max_length, keeping words together."""
-    words = text.split()
-    line = ''
-    lines = []
-    for word in words:
-        if len(line) + len(word) + 1 > max_length:
-            lines.append(line.rstrip())
-            line = ''
-        line += word + ' '
-    if line:
-        lines.append(line.rstrip())
-    return lines
-
-
 def build_content(item, issue_type):
     """Build content description based on issue type and available fields."""
     if issue_type == "license":
@@ -277,8 +292,7 @@ def build_content(item, issue_type):
     desc_parts = []
     for field in fields:
         if field_value := item.get(field):
-            lines = split_text_to_lines(field_value)
-            desc_parts.append("\n".join(lines))
+            desc_parts.append(field_value)
     return "\n\n".join(desc_parts)
 
 def should_include_item(item, severity, pkg_types):
