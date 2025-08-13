@@ -141,16 +141,13 @@ def print_table(output):
         # split text by /
         parts = text.split('/')
         combined_text = ""
-        for i, part in enumerate(parts):
-            if i == 0:
-                combined_text = part
+        for part in parts:
+            if len(combined_text) + len(part) + 2 > width:
+                yield f"{combined_text}/\n"
+                combined_text = "\n".join(textwrap.wrap(part, width=width))
             else:
-                if len(combined_text) + len(part) + 2 > width:
-                    yield f"{combined_text}/\n"
-                    combined_text = part
-                else:
-                    combined_text += f"/{part}"
-            yield combined_text
+                combined_text += f"/{part}"
+        yield combined_text
 
     # Prepare table data with wrapped text
     table_data = []
@@ -172,7 +169,7 @@ def print_table(output):
             "\n".join(textwrap.wrap(colored_severity, width=20)),
         ]
         wrapped_row_2 = [
-            "\n".join(textwrap.wrap("".join(custom_wrap(location, width=40)), width=40)),
+            "".join(custom_wrap(location, width=40)),
             "\n".join(textwrap.wrap(item.get('fingerprint', ''), width=80, replace_whitespace=False)),
         ]
         table_data.append(wrapped_row_1)
