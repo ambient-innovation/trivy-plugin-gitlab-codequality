@@ -171,9 +171,6 @@ def print_table(output):
         colored_severity = (
             f"{SEVERITY_COLORS.get(severity, '')}{severity.upper()}{RESET_COLOR}"
         )
-        colored_severity = (
-            f"{SEVERITY_COLORS.get(severity, '')}{severity.upper()}{RESET_COLOR}"
-        )
 
         # Check if description matches location and replace with a placeholder
         location = item.get("location", {}).get("path", "")
@@ -392,7 +389,7 @@ def create_output_item(item, issue_type):
     """Create a standardized output item from a Trivy result."""
     description = "UNKNOWN"
     if issue_type == "license":
-        description = f"Package: {item.get('PkgName', 'UNKNOWN')} License: {item.get('name', 'UNKNOWN')}"
+        description = f"Package: {item.get('PkgName', 'UNKNOWN')} License: {item.get('Name', 'UNKNOWN')}"
     elif issue_type == "misconfig":
         description = f"Misconfig: {item.get('Title', 'UNKNOWN')} Misconfig ID: {item.get('ID', 'UNKNOWN')}"
     elif issue_type == "vuln":
