@@ -9,79 +9,91 @@ from tabulate import SEPARATING_LINE
 
 try:
     from tabulate import tabulate
+
     TABULATE_AVAILABLE = True
 except ImportError:
     TABULATE_AVAILABLE = False
 
 LOG_PREFIX = "[trivy][plugins][codeclimate]"
 
-SEVERITY_MAP = {"LOW": "info", "MEDIUM": "minor", "HIGH": "major", "CRITICAL": "critical", "UNKNOWN": "blocker"}
+SEVERITY_MAP = {
+    "LOW": "info",
+    "MEDIUM": "minor",
+    "HIGH": "major",
+    "CRITICAL": "critical",
+    "UNKNOWN": "blocker",
+}
 
 # ANSI color codes for severity levels
 SEVERITY_COLORS = {
-    "info": "\033[94m",      # Blue for LOW/info
-    "minor": "\033[93m",     # Yellow for MEDIUM/minor
-    "major": "\033[91m",     # Red for HIGH/major
+    "info": "\033[94m",  # Blue for LOW/info
+    "minor": "\033[93m",  # Yellow for MEDIUM/minor
+    "major": "\033[91m",  # Red for HIGH/major
     "critical": "\033[95m",  # Magenta for CRITICAL/critical
-    "blocker": "\033[97;41m" # White on red background for UNKNOWN/blocker
+    "blocker": "\033[97;41m",  # White on red background for UNKNOWN/blocker
 }
 RESET_COLOR = "\033[0m"
 
-DEFAULT_SEVERITY = ['UNKNOWN','CRITICAL','HIGH']
+DEFAULT_SEVERITY = ["UNKNOWN", "CRITICAL", "HIGH"]
 
-DEFAULT_PKG_TYPES = ['os', 'library']
+DEFAULT_PKG_TYPES = ["os", "library"]
 
 DEBUG = False
 
+
 def main():
     global DEBUG
-    parser = argparse.ArgumentParser(prog='gitlab-codeclimate')
-    parser.add_argument('--severity',
-                        type=lambda x: x.split(','),
-                        default=DEFAULT_SEVERITY,
-                        help='Global Severity (Default)')
-    parser.add_argument('--severity-license',
-                        type=lambda x: x.split(','),
-                        help='License Severity')
-    parser.add_argument('--severity-vuln',
-                        type=lambda x: x.split(','),
-                        help='Vulnerabilities Severity')
-    parser.add_argument('--severity-misconfig',
-                        type=lambda x: x.split(','),
-                        help='Misconfig Severity')
-    parser.add_argument('--severity-secret',
-                        type=lambda x: x.split(','),
-                        help='Secret Severity')
-    parser.add_argument('--pkg-types',
-                        type=lambda x: x.split(','),
-                        default=DEFAULT_PKG_TYPES,
-                        help='Global Package Types (Default)')
-    parser.add_argument('--pkg-types-license',
-                        type=lambda x: x.split(','),
-                        help='License Package Types')
-    parser.add_argument('--pkg-types-vuln',
-                        type=lambda x: x.split(','),
-                        help='Vulnerabilities Package Types')
-    parser.add_argument('--pkg-types-misconfig',
-                        type=lambda x: x.split(','),
-                        help='Misconfig Package Types')
-    parser.add_argument('--pkg-types-secret',
-                        type=lambda x: x.split(','),
-                        help='Secret Package Types')
-    parser.add_argument('--debug',
-                        action='store_true',
-                        help='Debug Outputs')
-    parser.add_argument('-o', '--output',
-                        type=str,
-                        default=None,
-                        help='Output file')
-    parser.add_argument('-i', '--input',
-                        type=str,
-                        default=None,
-                        help='Input file')
-    parser.add_argument('-t', '--table',
-                        action='store_true',
-                        help='Output results as a table instead of JSON')
+    parser = argparse.ArgumentParser(prog="gitlab-codeclimate")
+    parser.add_argument(
+        "--severity",
+        type=lambda x: x.split(","),
+        default=DEFAULT_SEVERITY,
+        help="Global Severity (Default)",
+    )
+    parser.add_argument(
+        "--severity-license", type=lambda x: x.split(","), help="License Severity"
+    )
+    parser.add_argument(
+        "--severity-vuln", type=lambda x: x.split(","), help="Vulnerabilities Severity"
+    )
+    parser.add_argument(
+        "--severity-misconfig", type=lambda x: x.split(","), help="Misconfig Severity"
+    )
+    parser.add_argument(
+        "--severity-secret", type=lambda x: x.split(","), help="Secret Severity"
+    )
+    parser.add_argument(
+        "--pkg-types",
+        type=lambda x: x.split(","),
+        default=DEFAULT_PKG_TYPES,
+        help="Global Package Types (Default)",
+    )
+    parser.add_argument(
+        "--pkg-types-license", type=lambda x: x.split(","), help="License Package Types"
+    )
+    parser.add_argument(
+        "--pkg-types-vuln",
+        type=lambda x: x.split(","),
+        help="Vulnerabilities Package Types",
+    )
+    parser.add_argument(
+        "--pkg-types-misconfig",
+        type=lambda x: x.split(","),
+        help="Misconfig Package Types",
+    )
+    parser.add_argument(
+        "--pkg-types-secret", type=lambda x: x.split(","), help="Secret Package Types"
+    )
+    parser.add_argument("--debug", action="store_true", help="Debug Outputs")
+    parser.add_argument("-o", "--output", type=str, default=None, help="Output file")
+    parser.add_argument("-i", "--input", type=str, default=None, help="Input file")
+    parser.add_argument(
+        "-t",
+        "--table",
+        action="store_true",
+        help="Output results as a table instead of JSON",
+    )
+
     args = parser.parse_args()
 
     SEVERITY = build_severity_matrix(args)
@@ -92,7 +104,7 @@ def main():
 
     data = ""
     if args.input:
-        with open(args.input, 'r') as infile:
+        with open(args.input, "r") as infile:
             data = infile.read()
     else:
         for line in sys.stdin:
@@ -106,16 +118,16 @@ def main():
             print(f"{LOG_PREFIX} Scan Groups:")
             print(json.dumps(scan_groups, indent=2))
         for key, scan in scan_groups.items():
-           output += filter_scan(scan, key, SEVERITY[key], PKG_TYPES[key])
+            output += filter_scan(scan, key, SEVERITY[key], PKG_TYPES[key])
         if DEBUG:
             print(f"{LOG_PREFIX} Output:")
             print(json.dumps(output, indent=2))
-        
+
         if args.table:
             # Output as table
             print_table(output)
         if args.output:
-            with open(args.output, 'w') as f:
+            with open(args.output, "w") as f:
                 json.dump(output, f, indent=4)
         else:
             print(json.dumps(output, indent=4))
@@ -127,7 +139,9 @@ def main():
 def print_table(output):
     """Print results in a formatted table."""
     if not TABULATE_AVAILABLE:
-        print("Error: tabulate library not installed. Install with: pip install tabulate")
+        print(
+            "Error: tabulate library not installed. Install with: pip install tabulate"
+        )
         print("Falling back to JSON output:")
         print(json.dumps(output, indent=4))
         return
@@ -137,9 +151,9 @@ def print_table(output):
         return
 
     def custom_wrap(text, width):
-        """Custom wrap function to break lines preferably at '/' but also at max width."""
+        """Custom wrap function to break lines preferably at "/" but also at max width."""
         # split text by /
-        parts = text.split('/')
+        parts = text.split("/")
         combined_text = ""
         for part in parts:
             if len(combined_text) + len(part) + 2 > width:
@@ -152,37 +166,43 @@ def print_table(output):
     # Prepare table data with wrapped text
     table_data = []
     for item in output:
-        severity = item.get('severity', '')
+        severity = item.get("severity", "")
         # Add color to severity based on level
-        colored_severity = f"{SEVERITY_COLORS.get(severity, '')}{severity.upper()}{RESET_COLOR}"
+        colored_severity = (
+            f"{SEVERITY_COLORS.get(severity, '')}{severity.upper()}{RESET_COLOR}"
+        )
 
         # Check if description matches location and replace with a placeholder
-        location = item.get('location', {}).get('path', '')
-        description = item.get('description', '')
+        location = item.get("location", {}).get("path", "")
+        description = item.get("description", "")
         if description == location:
-            description = 'cf location'
+            description = "cf location"
 
         # Wrap text for each column, with custom handling for location
         wrapped_row_1 = [
-            "\n".join(textwrap.wrap(item.get('check_name', ''), width=20)),
+            "\n".join(textwrap.wrap(item.get("check_name", ""), width=20)),
             "\n".join(textwrap.wrap(description, width=80)),
             "\n".join(textwrap.wrap(colored_severity, width=20)),
         ]
         wrapped_row_2 = [
             "".join(custom_wrap(location, width=40)),
-            "\n".join(textwrap.wrap(item.get('fingerprint', ''), width=80, replace_whitespace=False)),
+            "\n".join(
+                textwrap.wrap(
+                    item.get("fingerprint", ""), width=80, replace_whitespace=False
+                )
+            ),
         ]
         table_data.append(wrapped_row_1)
-        table_data.append(["-"*20, "-"*20, "-"*8])
-    
+        table_data.append(["-" * 20, "-" * 20, "-" * 8])
+
         table_data.append(wrapped_row_2)
         table_data.append(SEPARATING_LINE)
 
     # Table headers
-    headers = ['Type\nLocation', 'Description\nDetails', 'Severity']
+    headers = ["Type\nLocation", "Description\nDetails", "Severity"]
 
     # Print table
-    print(tabulate(table_data, headers=headers, tablefmt='psql'))
+    print(tabulate(table_data, headers=headers, tablefmt="psql"))
     print(f"\nTotal issues found: {len(output)}")
 
 
@@ -195,6 +215,7 @@ def build_severity_matrix(args):
         "secret": args.severity_secret or args.severity,
     }
 
+
 def build_pkg_types_matrix(args):
     return {
         "pkg_types": args.pkg_types,
@@ -204,13 +225,14 @@ def build_pkg_types_matrix(args):
         "secret": args.pkg_types_secret or args.pkg_types,
     }
 
+
 def split_json(data):
     # Define the mapping of result types to their keys and default values
     result_types = {
         "Vulnerabilities": ("vuln", "vuln_results"),
         "Misconfigurations": ("misconfig", "misconfig_results"),
         "Licenses": ("license", "license_results"),
-        "Secrets": ("secret", "secrets_results")
+        "Secrets": ("secret", "secrets_results"),
     }
 
     # Initialize result containers
@@ -219,9 +241,9 @@ def split_json(data):
     # Helper function to process items and add metadata
     def process_items(items, result, item_type):
         for item in items:
-            item['Target'] = result.get('Target', item_type)
-            item['Class'] = item.get('Class', item_type)
-            item['Type'] = result.get('Type', item_type)
+            item["Target"] = result.get("Target", item_type)
+            item["Class"] = result.get("Class", item_type)
+            item["Type"] = result.get("Type", item_type)
         return items
 
     # Process Results array
@@ -236,58 +258,103 @@ def split_json(data):
         "vuln": results["vuln_results"],
         "misconfig": results["misconfig_results"],
         "license": results["license_results"],
-        "secret": results["secrets_results"]
+        "secret": results["secrets_results"],
     }
+
 
 def get_package_type(item):
     """
     Determine if this is an OS package or library package based on Trivy output fields.
-    Returns 'os' for operating system packages, 'library' for language/library packages.
+    Returns "os" for operating system packages, "library" for language/library packages.
     """
     # Check for Class field which indicates package type in Trivy output
-    pkg_class = item.get('Class', '').lower()
+    pkg_class = item.get("Class", "").lower()
 
     # Primary classification based on Class field
-    if pkg_class == 'os-pkgs':
-        return 'os'
-    elif pkg_class == 'lang-pkgs':
-        return 'library'
+    if pkg_class == "os-pkgs":
+        return "os"
+    elif pkg_class == "lang-pkgs":
+        return "library"
 
     # For license issues, check the Target field to determine if it's OS or language related
-    if pkg_class == 'license':
-        target = item.get('Target', '').lower()
-        if target == 'os packages':
-            return 'os'
-        elif target in ['node.js', 'python', 'java', 'ruby', 'conda']:
-            return 'library'
+    if pkg_class == "license":
+        target = item.get("Target", "").lower()
+        if target == "os packages":
+            return "os"
+        elif target in ["node.js", "python", "java", "ruby", "conda"]:
+            return "library"
         # For other license targets, default to library
-        return 'library'
+        return "library"
 
     # Fallback: check Target field for OS-related indicators
-    target = item.get('Target', '').lower()
-    if any(os_indicator in target for os_indicator in ['debian', 'ubuntu', 'centos', 'rhel', 'alpine', 'suse', 'fedora']):
-        return 'os'
+    target = item.get("Target", "").lower()
+    if any(
+        os_indicator in target
+        for os_indicator in [
+            "debian",
+            "ubuntu",
+            "centos",
+            "rhel",
+            "alpine",
+            "suse",
+            "fedora",
+        ]
+    ):
+        return "os"
 
     # Last resort: check FilePath for language-specific file extensions
-    file_path = item.get('PkgPath', item.get('FilePath', ''))
-    if file_path and any(ext in file_path.lower() for ext in ['.py', '.js', '.go', '.java', '.rb', '.php', '.rs', 'requirements.txt', 'package.json', 'go.mod', 'pom.xml', 'composer.json', 'cargo.toml']):
-        return 'library'
+    file_path = item.get("PkgPath", item.get("FilePath", ""))
+    if file_path and any(
+        ext in file_path.lower()
+        for ext in [
+            ".py",
+            ".js",
+            ".go",
+            ".java",
+            ".rb",
+            ".php",
+            ".rs",
+            "requirements.txt",
+            "package.json",
+            "go.mod",
+            "pom.xml",
+            "composer.json",
+            "cargo.toml",
+        ]
+    ):
+        return "library"
 
     # Default to library if we can't determine (most issues are typically in dependencies)
-    return 'library'
+    return "library"
+
 
 def build_content(item, issue_type):
     """Build content description based on issue type and available fields."""
     if issue_type == "license":
-        fields = ['Name', 'PkgName', 'FilePath']
+        fields = ["Name", "PkgName"]
     elif issue_type == "misconfig":
-        fields = ['Title', 'Target', 'Description', 'Message', 'Resolution', 'PrimaryURL']
+        fields = [
+            "ID",
+            "Target",
+            "Title",
+            "Description",
+            "Message",
+            "Resolution",
+            "PrimaryURL",
+        ]
     elif issue_type == "vuln":
-        fields = ['VulnerabilityID', 'PkgID', 'Description', 'PrimaryURL']
+        fields = [
+            "VulnerabilityID",
+            "PkgName",
+            "Title",
+            "Description",
+            "FixedVersion",
+            "PrimaryURL",
+        ]
     elif issue_type == "secret":
-        fields = ['Title', 'Target', 'Match']
+        fields = ["RuleID", "Target", "Title", "Match"]
     else:
-        fields = ['Description']
+        fields = ["Title"]
 
     desc_parts = []
     for field in fields:
@@ -295,39 +362,61 @@ def build_content(item, issue_type):
             desc_parts.append(field_value)
     return "\n\n".join(desc_parts)
 
+
 def should_include_item(item, severity, pkg_types):
     """Check if an item should be included based on severity and package type filters."""
     # Check severity filter
     if item.get("Severity") not in severity:
         if DEBUG:
-            print(f"{LOG_PREFIX} Filtering out {item.get('Severity')} package: {item.get('PkgName', item.get('Target', 'UNKNOWN'))}")
+            print(
+                f"{LOG_PREFIX} Filtering out {item.get('Severity')} package: {item.get('PkgName', item.get('Target', 'UNKNOWN'))}"
+            )
         return False
 
     # Check package type filter
     item_pkg_type = get_package_type(item)
     if item_pkg_type not in pkg_types:
         if DEBUG:
-            print(f"{LOG_PREFIX} Filtering out {item_pkg_type} package: {item.get('PkgName', item.get('Target', 'UNKNOWN'))}")
+            print(
+                f"{LOG_PREFIX} Filtering out {item_pkg_type} package: {item.get('PkgName', item.get('Target', 'UNKNOWN'))}"
+            )
         return False
 
     return True
 
+
 def create_output_item(item, issue_type):
     """Create a standardized output item from a Trivy result."""
+    description = "UNKNOWN"
+    if issue_type == "license":
+        description = f"Package: {item.get('PkgName', 'UNKNOWN')} License: {item.get('Name', 'UNKNOWN')}"
+    elif issue_type == "misconfig":
+        description = f"Misconfig: {item.get('Title', 'UNKNOWN')} Misconfig ID: {item.get('ID', 'UNKNOWN')}"
+    elif issue_type == "vuln":
+        description = f"Package: {item.get('PkgName', 'UNKNOWN')} Vulnerability ID: {item.get('VulnerabilityID', 'UNKNOWN')}"
+    elif issue_type == "secret":
+        description = f"Secret: {item.get('Title', 'UNKNOWN')} Secret ID: {item.get('RuleID', 'UNKNOWN')}"
+
     return {
         "check_name": issue_type,
-        "description": item.get('PkgId', item.get('PkgName', item.get('Target', "UNKNOWN"))),
+        "description": description,
         "fingerprint": build_content(item, issue_type),
         "severity": SEVERITY_MAP.get(item.get("Severity"), "info"),
         "categories": "Security",
         "location": {
-            "path": item.get("PkgPath", item.get("FilePath", item.get("PkgID", item.get("Target", "UNKNOWN")))),
-        }
+            "path": item.get(
+                "PkgPath",
+                item.get("FilePath", item.get("PkgID", item.get("Target", "UNKNOWN"))),
+            ),
+        },
     }
+
 
 def filter_scan(result, issue_type, severity, pkg_types):
     if DEBUG:
-        print(f"{LOG_PREFIX} Issue Type: {issue_type} Severity: {severity} Package Types: {pkg_types}")
+        print(
+            f"{LOG_PREFIX} Issue Type: {issue_type} Severity: {severity} Package Types: {pkg_types}"
+        )
 
     # Filter and transform items
     filtered_items = []
