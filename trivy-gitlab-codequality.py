@@ -93,6 +93,7 @@ def main():
         action="store_true",
         help="Output results as a table instead of JSON",
     )
+
     args = parser.parse_args()
 
     SEVERITY = build_severity_matrix(args)
@@ -150,7 +151,7 @@ def print_table(output):
         return
 
     def custom_wrap(text, width):
-        """Custom wrap function to break lines preferably at '/' but also at max width."""
+        """Custom wrap function to break lines preferably at "/" but also at max width."""
         # split text by /
         parts = text.split("/")
         combined_text = ""
@@ -167,6 +168,9 @@ def print_table(output):
     for item in output:
         severity = item.get("severity", "")
         # Add color to severity based on level
+        colored_severity = (
+            f"{SEVERITY_COLORS.get(severity, '')}{severity.upper()}{RESET_COLOR}"
+        )
         colored_severity = (
             f"{SEVERITY_COLORS.get(severity, '')}{severity.upper()}{RESET_COLOR}"
         )
@@ -241,7 +245,7 @@ def split_json(data):
     def process_items(items, result, item_type):
         for item in items:
             item["Target"] = result.get("Target", item_type)
-            item["Class"] = item.get("Class", item_type)
+            item["Class"] = result.get("Class", item_type)
             item["Type"] = result.get("Type", item_type)
         return items
 
@@ -264,7 +268,7 @@ def split_json(data):
 def get_package_type(item):
     """
     Determine if this is an OS package or library package based on Trivy output fields.
-    Returns 'os' for operating system packages, 'library' for language/library packages.
+    Returns "os" for operating system packages, "library" for language/library packages.
     """
     # Check for Class field which indicates package type in Trivy output
     pkg_class = item.get("Class", "").lower()
@@ -330,22 +334,30 @@ def get_package_type(item):
 def build_content(item, issue_type):
     """Build content description based on issue type and available fields."""
     if issue_type == "license":
-        fields = ["Name", "PkgName", "FilePath"]
+        fields = ["Name", "PkgName"]
     elif issue_type == "misconfig":
         fields = [
-            "Title",
+            "ID",
             "Target",
+            "Title",
             "Description",
             "Message",
             "Resolution",
             "PrimaryURL",
         ]
     elif issue_type == "vuln":
-        fields = ["VulnerabilityID", "PkgID", "Description", "PrimaryURL"]
+        fields = [
+            "VulnerabilityID",
+            "PkgName",
+            "Title",
+            "Description",
+            "FixedVersion",
+            "PrimaryURL",
+        ]
     elif issue_type == "secret":
-        fields = ["Title", "Target", "Match"]
+        fields = ["RuleID", "Target", "Title", "Match"]
     else:
-        fields = ["Description"]
+        fields = ["Title"]
 
     desc_parts = []
     for field in fields:
@@ -378,11 +390,19 @@ def should_include_item(item, severity, pkg_types):
 
 def create_output_item(item, issue_type):
     """Create a standardized output item from a Trivy result."""
+    description = "UNKNOWN"
+    if issue_type == "license":
+        description = f"Package: {item.get('PkgName', 'UNKNOWN')} License: {item.get('name', 'UNKNOWN')}"
+    elif issue_type == "misconfig":
+        description = f"Misconfig: {item.get('Title', 'UNKNOWN')} Misconfig ID: {item.get('ID', 'UNKNOWN')}"
+    elif issue_type == "vuln":
+        description = f"Package: {item.get('PkgName', 'UNKNOWN')} Vulnerability ID: {item.get('VulnerabilityID', 'UNKNOWN')}"
+    elif issue_type == "secret":
+        description = f"Secret: {item.get('Title', 'UNKNOWN')} Secret ID: {item.get('RuleID', 'UNKNOWN')}"
+
     return {
         "check_name": issue_type,
-        "description": item.get(
-            "PkgId", item.get("PkgName", item.get("Target", "UNKNOWN"))
-        ),
+        "description": description,
         "fingerprint": build_content(item, issue_type),
         "severity": SEVERITY_MAP.get(item.get("Severity"), "info"),
         "categories": "Security",
